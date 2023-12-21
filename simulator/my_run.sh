@@ -1,0 +1,1 @@
+python2.7 run_sim.py --cluster_spec=n32g4.csv --print --scheme=yarn --trace_file=60_job.csv --schedule=muxflow --log_path=test_2

@@ -304,8 +304,6 @@ class _TFJobs(object):
         ps_w_fd.close()
         
 
-
-
     def read_job_info(self, job_idx, field=None):
         ''' Read  job information, if field == NONE, show all job info'''
         ''' job_id,num_gpu,submit_time,start_time,duration,model_size,aggr_interval '''
@@ -359,8 +357,6 @@ class _TFJobs(object):
         tmp_dict['nodes'] = node_list
         job['placements'].append(tmp_dict)
 
-
-
     def create_single_node_placement(self, job, switch_id, node_id, num_gpu, num_cpu, mem=0):
         '''
         under this switch, there is only one need used
@@ -394,7 +390,6 @@ class _TFJobs(object):
     def move_to_pending(self, job):
         job['status'] = 'PENDING'
         self.pending_jobs.append(job)
-
 
     def update_pending_time(self, event_time):
         for job in self.pending_jobs:
@@ -498,8 +493,6 @@ class _TFJobs(object):
 
         # ''' sort events based on their time'''
         # self.job_events.sort(key = lambda e:e.__getitem__('time'))
-
-
 
     def prepare_job_start_events(self):
         '''

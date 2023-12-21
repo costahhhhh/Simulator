@@ -26,6 +26,7 @@ flags.DEFINE_string('trace_file', 'tf_job.csv',
                 '''Provide TF job trace file (*.csv, *.txt).
                     *.csv file, use \',\' as delimiter; *.txt file, user \' \' as deliminter. 
                     Default file is tf_job.csv ''')
+
 flags.DEFINE_string('log_path', 'result-' + time.strftime("%Y%m%d-%H-%M-%S", time.localtime()),
                 '''Simulation output folder, including cluster/node/gpu usage trace, pending job_queue info.
                 Default folder is result-[time]''')
@@ -268,7 +269,6 @@ def gandiva_sim_jobs(gputime=False, solve_starvation=0):
         # cur_time = cur_time + 1
 
 
-
 def one_queue_fifo_sim_jobs():
     '''
     run jobs in fifo order;
@@ -281,8 +281,10 @@ def one_queue_fifo_sim_jobs():
 
         event = JOBS.job_events[0]
         event_time = event['time']
+        # print("#"*30,type(event),"#"*30+"\n")
+
         # util.print_fn('--------------------------------- Handle event[time %d]------------------------------------' % event_time)
-        #for ending jobs, release gpu
+        # for ending jobs, release gpu
         has_ejob = False
         for e_job in event['end_jobs']:
             #remove from migratable jobs, if it's there
@@ -323,9 +325,6 @@ def one_queue_fifo_sim_jobs():
                 JOBS.add_job_end_event(ns_job)
                 util.print_fn('----job[%d] starts from pending' % ns_job['job_idx'])
 
-
-        #sort pending jobs based on the num_gpu
-        #JOBS.pending_jobs.sort(key = lambda e:e.__getitem__('num_gpu'))
 
         #remove time_event
         JOBS.job_events.pop(0)
@@ -394,63 +393,64 @@ def fit_first_sim_jobs():
 
         LOG.checkpoint(event_time)
 
-# def smallest_first_sim_jobs():
-#     '''
-#     new jobs are added to the end of the ending queue
-#     but in the queue, smallest (gpu) job first be served, until no resource
-#     '''
-#     while (len(JOBS.job_events) + len(JOBS.pending_jobs))> 0:
-#         if len(JOBS.job_events) == 0:
-#             util.print_fn("This cluster is not large enough to run the job")
-#             break
+"""
+def smallest_first_sim_jobs():
+    '''
+    new jobs are added to the end of the ending queue
+    but in the queue, smallest (gpu) job first be served, until no resource
+    '''
+    while (len(JOBS.job_events) + len(JOBS.pending_jobs))> 0:
+        if len(JOBS.job_events) == 0:
+            util.print_fn("This cluster is not large enough to run the job")
+            break
 
-#         event = JOBS.job_events[0]
-#         event_time = event['time']
-#         # util.print_fn('--------------------------------- Handle event[time %d]------------------------------------' % event_time)
-#         #for ending jobs, release gpu
-#         for e_job in event['end_jobs']:
-#             #remove from migratable jobs, if it's there
-#             # JOBS.remote_migratable(e_job)
+        event = JOBS.job_events[0]
+        event_time = event['time']
+        # util.print_fn('--------------------------------- Handle event[time %d]------------------------------------' % event_time)
+        #for ending jobs, release gpu
+        for e_job in event['end_jobs']:
+            #remove from migratable jobs, if it's there
+            # JOBS.remote_migratable(e_job)
 
-#             #job completes
-#             CLUSTER.release_job_res(e_job)
-#             # CLUSTER.release_gpus(e_job)
-#             LOG.job_complete(e_job, event_time)
+            #job completes
+            CLUSTER.release_job_res(e_job)
+            # CLUSTER.release_gpus(e_job)
+            LOG.job_complete(e_job, event_time)
 
 
-#         #for new-start jobs, try to start
-#         for s_job in event['start_jobs']:
-#             #add into pending list
-#             JOBS.move_to_pending(s_job)
+        #for new-start jobs, try to start
+        for s_job in event['start_jobs']:
+            #add into pending list
+            JOBS.move_to_pending(s_job)
 
-#         #sort pending jobs based on the num_gpu
-#         JOBS.pending_jobs.sort(key = lambda e:e.__getitem__('num_gpu'))
+        #sort pending jobs based on the num_gpu
+        JOBS.pending_jobs.sort(key = lambda e:e.__getitem__('num_gpu'))
 
-#         new_start_list = list()
-#         for p_job in JOBS.pending_jobs:
-#             # ret = CLUSTER.alloc_gpus(p_job)
-#             ret = try_get_job_res(p_job)
-#             if ret == True:
-#                 ''' if remove_from_pending, then will miss the next p_job in the list '''
-#                 new_start_list.append(p_job)
-#                 # JOBS.remove_from_pending(p_job, event_time)
-#                 # JOBS.add_job_end_event(p_job)
-#                 # util.print_fn('----job[%d] starts from pending' % p_job['job_idx'])
-#             else:
-#                 break
+        new_start_list = list()
+        for p_job in JOBS.pending_jobs:
+            # ret = CLUSTER.alloc_gpus(p_job)
+            ret = try_get_job_res(p_job)
+            if ret == True:
+                ''' if remove_from_pending, then will miss the next p_job in the list '''
+                new_start_list.append(p_job)
+                # JOBS.remove_from_pending(p_job, event_time)
+                # JOBS.add_job_end_event(p_job)
+                # util.print_fn('----job[%d] starts from pending' % p_job['job_idx'])
+            else:
+                break
 
-#         for ns_job in new_start_list:
-#             JOBS.remove_from_pending(ns_job, event_time)
-#             JOBS.add_job_end_event(ns_job)
-#             util.print_fn('----job[%d] starts from pending' % ns_job['job_idx'])
+        for ns_job in new_start_list:
+            JOBS.remove_from_pending(ns_job, event_time)
+            JOBS.add_job_end_event(ns_job)
+            util.print_fn('----job[%d] starts from pending' % ns_job['job_idx'])
 
-#         #remove time_event
-#         JOBS.job_events.pop(0)
-#         JOBS.job_events.sort(key = lambda e:e.__getitem__('time'))
-#         # JOBS.print_job_events()
+        #remove time_event
+        JOBS.job_events.pop(0)
+        JOBS.job_events.sort(key = lambda e:e.__getitem__('time'))
+        # JOBS.print_job_events()
 
-#         LOG.checkpoint(event_time)
-
+        LOG.checkpoint(event_time)
+"""
 def smallest_first_sim_jobs(gputime=False):
     '''
     new jobs are added to the end of the ending queue
@@ -2095,6 +2095,14 @@ def main():
         gandiva_sim_jobs(True, 1000)
     elif FLAGS.schedule == 'gpu-demands':
         sim_gpu_demands()
+    elif FLAGS.schedule == 'muxflow':
+        from muxflow_scheduler import MuxflowScheduler
+        mscheduler = MuxflowScheduler()
+        mscheduler.muxflow_sim_jobs()
+        
+        one_queue_fifo_sim_jobs()
+
+        pass
     else:
         one_queue_fifo_sim_jobs()
 
